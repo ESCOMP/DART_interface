@@ -1,0 +1,10 @@
+# Ignore core DART src
+DART
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+cime_config/buildnmlc
+cime_config/buildlibc
+*$py.class
+buildnmlc
