@@ -27,22 +27,33 @@ def buildlib(caseroot, libroot, bldroot):
     with Case(caseroot) as case:
         # first check for the external FMS library and build it
         logger.info("Building DART")
+        objroot = case.get_value("OBJROOT")
         srcroot = case.get_value("SRCROOT")
-        comp_root_dir_esp = case.get_value("COMP_ROOT_DIR_ESP")
+        dartroot = case.get_value("COMP_ROOT_DIR_ESP")
         casetools = case.get_value("CASETOOLS")
         gmake_j = case.get_value("GMAKE_J")
         gmake = case.get_value("GMAKE")
 
-        #-------------------------------------------------------
-        # create Filepath file for mom
-        #-------------------------------------------------------
+        # create Filepath 
+        filepath_file = os.path.join(objroot, "esp", "obj", "Filepath")
+        if not os.path.isfile(filepath_file):
+            paths = [
+                os.path.join(caseroot,"SourceMods","src.dart"), # todo, this SourceMods dir doesn't exist yet
+                os.path.join(objroot, "esp", "source"),
+                os.path.join(dartroot, "nuopc_driver")
+                ]
+            
+            with open(filepath_file, 'w') as filepath:
+                filepath.write("\n".join(paths))
+                filepath.write("\n")
+
         os.chdir(bldroot)
 
         # build the library
         makefile = os.path.join(casetools, "Makefile")
         complib = os.path.join(libroot,"libesp.a")
         cmd = f"{gmake} complib -j {gmake_j} COMP_NAME=dart COMPLIB={complib} " +\
-              f"-f {makefile} USER_INCLDIR={user_incldir} {get_standard_makefile_args(case)}"
+              f"-f {makefile} {get_standard_makefile_args(case)}"
 
         rc, out, err = run_cmd(cmd)
         logger.info("%s: \n\n output:\n %s \n\n err:\n\n%s\n"%(cmd,out,err))
