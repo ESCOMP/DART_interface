@@ -16,11 +16,30 @@ sys.path.append(os.path.join(_CIMEROOT, "scripts", "Tools"))
 
 from standard_script_setup import *
 from CIME.case import Case
-from CIME.nmlgen import NamelistGenerator
 from CIME.utils import expect, safe_copy
 from CIME.buildnml import create_namelist_infile, parse_input
 
+from CIME.ParamGen.paramgen import ParamGen
+
 logger = logging.getLogger(__name__)
+
+def gen_DART_input_nml(case):
+
+    class DART_input_nml(ParamGen):
+        def write(self, output_path, case):
+            self.reduce(lambda varname: case.get_value(varname))
+            self.write_nml(output_path)
+
+    dartroot = case.get_value("COMP_ROOT_DIR_ESP")
+    caseroot = case.get_value("CASEROOT")
+    input_nml_template = os.path.join(dartroot, "param_templates", "json", "input_nml.json")
+    input_nml = DART_input_nml.from_json(input_nml_template)
+    input_nml.write(os.path.join(caseroot,"input.nml"), case)
+
+def consistency_checks(case):
+    calendar = case.get_value("CALENDAR")
+    expect(calendar=="GREGORIAN", "When DART is active, the model calendar must be GREGORIAN.")
+
 
 # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 ####################################################################################
@@ -41,11 +60,17 @@ def buildnml(case, caseroot, compname):
     if not os.path.isdir(confdir):
         os.makedirs(confdir)
 
+    # few consistency checks
+    consistency_checks(case)
+
+    # generate DART_input_nml
+    gen_DART_input_nml(case)
+
 ###############################################################################
 def _main_func():
     caseroot = parse_input(sys.argv)
     with Case(caseroot) as case:
-        buildnml(case, caseroot, "desp")
+        buildnml(case, caseroot, "dart")
 
 
 if __name__ == "__main__":
