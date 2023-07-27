@@ -20,16 +20,107 @@ from CIME.build import get_standard_makefile_args
 
 logger = logging.getLogger(__name__)
 
-###############################################################################
-def buildlib(caseroot, libroot, bldroot):
-###############################################################################
+cesmtagmajor = "cesm2_1" # TODO: Generalize this!
 
+def CESM_DART_config(case):
+    '''
+    (1) Build the DART executables using the conventional DART scripts (quickbuild.sh et al.)
+    In the future, this routine should be replaced by a build routine that actually takes
+    advantage of CIME build infrastructure.
+
+    (2) 
+
+    adopted from CESM_DART_config.csh
+
+    WARNING: this function defies many CESM conventions and must be rewritten to adhere
+    to CESM build conventions before a major releae.
+    '''
+
+    logger.info("Building DART executables using the conventional DART build routine.")
+
+    caseroot = case.get_value("CASEROOT")
+    dartroot = case.get_value("COMP_ROOT_DIR_ESP")
+    comp_ocn = case.get_value("COMP_OCN")
+    exeroot = case.get_value("EXEROOT")
+
+    # Number of model run - data assimilation steps to complete
+    data_assimilation_cycles = case.get_value("DATA_ASSIMILATION_CYCLES")
+    expect(data_assimilation_cycles>0, "DATA_ASSIMILATION_CYCLES must be greater than 0 when DART is active.")
+
+    # DATA_ASSIMILATION flag for each component
+    data_assimilation = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
+                            for cc in ['atm', 'cpl', 'ocn', 'wav', 'glc', 'ice', 'rof', 'lnd'] }
+
+    # number of components for which DA is on 
+    n_da_comp = sum(data_assimilation.values())
+    expect(n_da_comp>0, "At least one component must be subject to data assimilation when DART is active.")
+
+    # select the appropriate mkmf.template:
+    compiler = case.get_value("COMPILER")
+    build_templates_dir = os.path.join(dartroot,"DART","build_templates")
+    if compiler == "intel":
+        shutil.copy(os.path.join(build_templates_dir, "mkmf.template.intel.linux"), os.path.join(build_templates_dir, "mkmf.template"))
+    elif compiler == "gnu":
+        shutil.copy(os.path.join(build_templates_dir, "mkmf.template.gfortran"), os.path.join(build_templates_dir, "mkmf.template"))
+    else:
+        expect(False, "Unsupported compset for DATA_ASSIMILATION.")
+
+    
+    if data_assimilation['ocn'] is True:
+
+        # DA to be applied to the ocn component only.
+        expect(n_da_comp==1, "When OCN data assimilation is turned on, data assimilation "
+                      "for all other comps must be turned of (just for now)")
+
+        if comp_ocn == "pop":
+            dart_model_dir = os.path.join(dartroot,"DART","models","POP")
+
+            # (1) Make sure the DART executables exist or build them if we can't find them.
+            # -------------------------------------------------------------------------
+            targetdir = os.path.join(dart_model_dir,"work")
+            if not os.path.exists(os.path.join(targetdir,"filter")):
+                logger.warning("Executable file 'filter' not found.\n"
+                               "Trying to (re)build all executables now")
+                os.chdir(targetdir)
+                cmd = "./quickbuild.sh"
+                rc, out, err = run_cmd(cmd)
+                logger.info("%s: \n\n output:\n %s \n\n err:\n\n%s\n"%(cmd,out,err))
+                expect(rc == 0, "Command %s failed with rc=%s" % (cmd, rc))
+
+            # (2) Stage the required parts of DART in the CASEROOT directory.
+            # -------------------------------------------------------------------------
+            logger.info("Staging the required parts of DART in the CASEROOT directory")
+            shutil.copy(os.path.join(dart_model_dir,"shell_scripts",cesmtagmajor,"assimilate.csh"), caseroot)
+            shutil.copy(os.path.join(dart_model_dir,"shell_scripts",cesmtagmajor,"perfect_model.csh"), caseroot)
+
+            # (3) Stage the DART executables in the CESM execution root directory
+            # -------------------------------------------------------------------------
+            # note: input.nml is generated at buildnml stage.
+            shutil.copy(os.path.join(dart_model_dir,"work","filter"), exeroot)
+            shutil.copy(os.path.join(dart_model_dir,"work","perfect_model_obs"), exeroot)
+            shutil.copy(os.path.join(dart_model_dir,"work","fill_inflation_restart"), exeroot)
+
+            # (4) Stage the files needed for SAMPLING ERROR CORRECTION 
+            # -------------------------------------------------------------------------
+            ### TODO set 'DATA_ASSIMILATION_SCRIPT' accordingly...
+
+        else:
+            expect(False, "Unsupported OCN component for data assimilation")
+
+    else:
+        expect(False, "Unsupported combination of DATA_ASSIMILATION flags")
+
+
+def buildlib(caseroot, libroot, bldroot):
+    '''The top-level buildlib function.'''
+
+    # build a pseudo-DART library (consisting of a dummy nuopc driver only).
     with Case(caseroot) as case:
         # first check for the external FMS library and build it
         logger.info("Building DART")
         objroot = case.get_value("OBJROOT")
-        srcroot = case.get_value("SRCROOT")
         dartroot = case.get_value("COMP_ROOT_DIR_ESP")
+        caseroot = case.get_value("CASEROOT")
         casetools = case.get_value("CASETOOLS")
         gmake_j = case.get_value("GMAKE_J")
         gmake = case.get_value("GMAKE")
@@ -59,6 +150,7 @@ def buildlib(caseroot, libroot, bldroot):
         logger.info("%s: \n\n output:\n %s \n\n err:\n\n%s\n"%(cmd,out,err))
         expect(rc == 0, "Command %s failed with rc=%s" % (cmd, rc))
 
+        CESM_DART_config(case)
 
 def _main_func():
     caseroot, libroot, bldroot = parse_input(sys.argv)
