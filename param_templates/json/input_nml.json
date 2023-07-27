@@ -77,7 +77,9 @@
          "values": "'no_CESM_advance_script'"
       },
       "ens_size": {
-         "values": 3
+         "$DATA_ASSIMILATION_OCN == True": {
+            "values": "$NINST_OCN"
+         }
       },
       "obs_sequence_in_name": {
          "values": "'obs_seq.out'"
@@ -113,7 +115,9 @@
          "values": "3,"
       },
       "num_output_obs_members": {
-         "values": 3
+         "$DATA_ASSIMILATION_OCN == True": {
+            "values": "$NINST_OCN"
+         }
       },
       "output_interval": {
          "values": 1

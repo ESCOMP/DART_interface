@@ -56,7 +56,8 @@ filter_nml:
   adv_ens_command:
     values: "'no_CESM_advance_script'"
   ens_size:
-    values: 3
+    $DATA_ASSIMILATION_OCN == True: #note
+      values: $NINST_OCN
   obs_sequence_in_name:
     values: "'obs_seq.out'"
   obs_sequence_out_name:
@@ -80,7 +81,8 @@ filter_nml:
   num_output_state_members:
     values: 3,
   num_output_obs_members:
-    values: 3
+    $DATA_ASSIMILATION_OCN == True:
+      values: $NINST_OCN
   output_interval:
     values: 1
   num_groups:
