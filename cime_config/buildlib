@@ -20,25 +20,15 @@ from CIME.build import get_standard_makefile_args
 
 logger = logging.getLogger(__name__)
 
-cesmtagmajor = "cesm2_1" # TODO: Generalize this!
-
 def CESM_DART_config(case):
     '''
-    (1) Build the DART executables using the conventional DART scripts (quickbuild.sh et al.)
+    Build the DART executables using the conventional DART scripts (quickbuild.sh et al.)
     In the future, this routine should be replaced by a build routine that actually takes
     advantage of CIME build infrastructure.
-
-    (2) 
-
-    adopted from CESM_DART_config.csh
-
-    WARNING: this function defies many CESM conventions and must be rewritten to adhere
-    to CESM build conventions before a major releae.
     '''
 
     logger.info("Building DART executables using the conventional DART build routine.")
 
-    caseroot = case.get_value("CASEROOT")
     dartroot = case.get_value("COMP_ROOT_DIR_ESP")
     comp_ocn = case.get_value("COMP_OCN")
     exeroot = case.get_value("EXEROOT")
@@ -51,7 +41,7 @@ def CESM_DART_config(case):
     data_assimilation = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
                             for cc in ['atm', 'cpl', 'ocn', 'wav', 'glc', 'ice', 'rof', 'lnd'] }
 
-    # number of components for which DA is on 
+    # number of components for which DA is on
     n_da_comp = sum(data_assimilation.values())
     expect(n_da_comp>0, "At least one component must be subject to data assimilation when DART is active.")
 
@@ -65,17 +55,17 @@ def CESM_DART_config(case):
     else:
         expect(False, "Unsupported compset for DATA_ASSIMILATION.")
 
-    
+
     if data_assimilation['ocn'] is True:
 
         # DA to be applied to the ocn component only.
         expect(n_da_comp==1, "When OCN data assimilation is turned on, data assimilation "
-                      "for all other comps must be turned of (just for now)")
+                      "for all other comps must be turned off (just for now)")
 
         if comp_ocn == "pop":
             dart_model_dir = os.path.join(dartroot,"DART","models","POP")
 
-            # (1) Make sure the DART executables exist or build them if we can't find them.
+            # Make sure the DART executables exist or build them if we can't find them.
             # -------------------------------------------------------------------------
             targetdir = os.path.join(dart_model_dir,"work")
             if not os.path.exists(os.path.join(targetdir,"filter")):
@@ -87,22 +77,13 @@ def CESM_DART_config(case):
                 logger.info("%s: \n\n output:\n %s \n\n err:\n\n%s\n"%(cmd,out,err))
                 expect(rc == 0, "Command %s failed with rc=%s" % (cmd, rc))
 
-            # (2) Stage the required parts of DART in the CASEROOT directory.
+            # Stage the DART executables in the CESM execution root directory
             # -------------------------------------------------------------------------
-            logger.info("Staging the required parts of DART in the CASEROOT directory")
-            shutil.copy(os.path.join(dart_model_dir,"shell_scripts",cesmtagmajor,"assimilate.csh"), caseroot)
-            shutil.copy(os.path.join(dart_model_dir,"shell_scripts",cesmtagmajor,"perfect_model.csh"), caseroot)
-
-            # (3) Stage the DART executables in the CESM execution root directory
-            # -------------------------------------------------------------------------
-            # note: input.nml is generated at buildnml stage.
             shutil.copy(os.path.join(dart_model_dir,"work","filter"), exeroot)
             shutil.copy(os.path.join(dart_model_dir,"work","perfect_model_obs"), exeroot)
             shutil.copy(os.path.join(dart_model_dir,"work","fill_inflation_restart"), exeroot)
 
-            # (4) Stage the files needed for SAMPLING ERROR CORRECTION 
-            # -------------------------------------------------------------------------
-            ### TODO set 'DATA_ASSIMILATION_SCRIPT' accordingly...
+            # Note: the remaining CESM_DART_config tasks are done in buildnml.
 
         else:
             expect(False, "Unsupported OCN component for data assimilation")
@@ -125,7 +106,7 @@ def buildlib(caseroot, libroot, bldroot):
         gmake_j = case.get_value("GMAKE_J")
         gmake = case.get_value("GMAKE")
 
-        # create Filepath 
+        # create Filepath
         filepath_file = os.path.join(objroot, "esp", "obj", "Filepath")
         if not os.path.isfile(filepath_file):
             paths = [
@@ -133,7 +114,7 @@ def buildlib(caseroot, libroot, bldroot):
                 os.path.join(objroot, "esp", "source"),
                 os.path.join(dartroot, "nuopc_driver")
                 ]
-            
+
             with open(filepath_file, 'w') as filepath:
                 filepath.write("\n".join(paths))
                 filepath.write("\n")

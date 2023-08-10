@@ -9,7 +9,7 @@
 # Disable these because this is our standard setup
 # pylint: disable=wildcard-import,unused-wildcard-import
 
-import os, sys, glob
+import os, sys, shutil
 
 _CIMEROOT = os.getenv("CIMEROOT")
 sys.path.append(os.path.join(_CIMEROOT, "scripts", "Tools"))
@@ -22,6 +22,8 @@ from CIME.buildnml import create_namelist_infile, parse_input
 from CIME.ParamGen.paramgen import ParamGen
 
 logger = logging.getLogger(__name__)
+
+cesmtagmajor = "cesm2_1" # TODO: Generalize this!
 
 def gen_DART_input_nml(case):
 
@@ -39,6 +41,42 @@ def gen_DART_input_nml(case):
 def consistency_checks(case):
     calendar = case.get_value("CALENDAR")
     expect(calendar=="GREGORIAN", "When DART is active, the model calendar must be GREGORIAN.")
+
+def stage_sampling_error_correction(case):
+
+    caseroot = case.get_value("CASEROOT")
+    dartroot = case.get_value("COMP_ROOT_DIR_ESP")
+    comp_ocn = case.get_value("COMP_OCN")
+
+    # DATA_ASSIMILATION flag for each component
+    data_assimilation = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
+                            for cc in ['atm', 'cpl', 'ocn', 'wav', 'glc', 'ice', 'rof', 'lnd'] }
+
+    if data_assimilation['ocn'] is True:
+
+        if comp_ocn == "pop":
+            dart_model_dir = os.path.join(dartroot,"DART","models","POP")
+
+            # Stage the files needed for SAMPLING ERROR CORRECTION
+            # -------------------------------------------------------------------------
+            # TODO: copy below files to Buildconf/dartconf, and not to the caseroot
+            ninst_ocn = int(case.get_value('NINST_OCN'))
+            assim_script = "assimilate.csh" if ninst_ocn>1 else "perfect_model.csh"
+            shutil.copy(os.path.join(dart_model_dir, "shell_scripts", cesmtagmajor, assim_script), caseroot)
+            case.set_value('DATA_ASSIMILATION_SCRIPT', os.path.join(caseroot, assim_script))
+
+            samp_err_file = os.path.join(dartroot, 'DART', 'assimilation_code', 'programs',
+                                         'gen_sampling_err_table', 'work', 'sampling_error_correction_table.nc')
+            if os.path.exists(samp_err_file):
+                expect(3<=ninst_ocn<=200, f"sampling_error_correction_table.nc handles ensemble sizes 3...200. "
+                                          f"Yours is {ninst_ocn}.")
+            #else: # sampling_error_correction_table.nc file found
+            # TODO
+
+        else:
+            expect(False, "Unsupported OCN component for data assimilation")
+    else:
+        expect(False, "Unsupported combination of DATA_ASSIMILATION flags")
 
 
 # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
@@ -65,6 +103,10 @@ def buildnml(case, caseroot, compname):
 
     # generate DART_input_nml
     gen_DART_input_nml(case)
+
+    # stage sampling error correction
+    stage_sampling_error_correction(case)
+
 
 ###############################################################################
 def _main_func():
