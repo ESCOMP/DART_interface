@@ -1,0 +1,13 @@
+!------------------------------------------------------------------------
+! Users should ONLY USE user_nl_dart to change namelists variables
+! for namelist variables in DART input.nml 
+! Users should add ALL user specific namelist changes below using the 
+! following syntax
+!   namelist_var = new_namelist_value
+!
+! Note that some namelist variables MAY NOT be changed in user_nl_dart - 
+! they are defined in a $CASEROOT xml file and must be changed with
+! xmlchange.
+!
+!------------------------------------------------------------------------
+

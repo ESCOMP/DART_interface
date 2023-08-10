@@ -19,7 +19,7 @@ from CIME.case import Case
 from CIME.utils import expect, safe_copy
 from CIME.buildnml import create_namelist_infile, parse_input
 
-from CIME.ParamGen.paramgen import ParamGen
+from CIME.ParamGen.paramgen_nml import ParamGen_NML
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ cesmtagmajor = "cesm2_1" # TODO: Generalize this!
 
 def gen_DART_input_nml(case):
 
-    class DART_input_nml(ParamGen):
+    class DART_input_nml(ParamGen_NML):
         def write(self, output_path, case):
             self.reduce(lambda varname: case.get_value(varname))
             self.write_nml(output_path)
@@ -36,7 +36,36 @@ def gen_DART_input_nml(case):
     caseroot = case.get_value("CASEROOT")
     input_nml_template = os.path.join(dartroot, "param_templates", "json", "input_nml.json")
     input_nml = DART_input_nml.from_json(input_nml_template)
+
+    user_nl_dart = ParamGen_NML.from_nml_file(os.path.join(caseroot,"user_nl_dart"))
+
+    # loop over all variables in user_nl_dart. For variables with unspecified namelist groups,
+    # determine their groups (if possible) and restore the accordingly
+    if 'no_group' in user_nl_dart.data: 
+        for var, val in user_nl_dart.data['no_group'].items():
+            var_group = None
+            for group in input_nml.data:
+                if var in input_nml.data[group]:
+                    expect(var_group is None, f"In user_nl_dart, cannot determine which namelist group the variable "
+                                                f" {var} belongs to. (There are be multiple variables with the same "
+                                                f"name that belongs to more than one namelist groups.)")
+                    var_group = group
+            expect(var_group is not None, f"In user_nl_dart, cannot determine which namelist group the variable "
+                                        f" {var} belongs to. (No {var} was found in the default input.nml.")
+            if var_group not in user_nl_dart.data:
+                user_nl_dart.data[var_group] = {}
+            user_nl_dart.data[var_group][var] = {'values': val}
+    
+        # drop 'no_group'. (All variables in 'no_group' are copied to their respective groups above.)
+        user_nl_dart.data.pop('no_group')
+
+    # apply user_nl changes to final input.nml
+    if len(user_nl_dart.data)>0:
+        input_nml.append(user_nl_dart)
+
     input_nml.write(os.path.join(caseroot,"input.nml"), case)
+
+    return input_nml
 
 def consistency_checks(case):
     calendar = case.get_value("CALENDAR")
