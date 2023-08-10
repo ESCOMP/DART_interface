@@ -71,10 +71,11 @@ def consistency_checks(case):
     calendar = case.get_value("CALENDAR")
     expect(calendar=="GREGORIAN", "When DART is active, the model calendar must be GREGORIAN.")
 
-def stage_sampling_error_correction(case):
+def stage_sampling_error_correction(case, input_nml):
 
     caseroot = case.get_value("CASEROOT")
     dartroot = case.get_value("COMP_ROOT_DIR_ESP")
+    rundir = case.get_value("RUNDIR")
     comp_ocn = case.get_value("COMP_OCN")
 
     # DATA_ASSIMILATION flag for each component
@@ -99,8 +100,13 @@ def stage_sampling_error_correction(case):
             if os.path.exists(samp_err_file):
                 expect(3<=ninst_ocn<=200, f"sampling_error_correction_table.nc handles ensemble sizes 3...200. "
                                           f"Yours is {ninst_ocn}.")
-            #else: # sampling_error_correction_table.nc file found
-            # TODO
+                shutil.copy(samp_err_file, rundir)
+            else: # sampling_error_correction_table.nc file found
+                sampling_error_correction = input_nml.data['assim_tools_nml']['sampling_error_correction']['values']
+                print(sampling_error_correction)
+                expect(sampling_error_correction != '.true.', \
+                        "No sampling_error_correction_table.nc file found...\n"
+                        "The input.nml:assim_tool_nml:sampling_error_correction is .true. so this file must exist.")
 
         else:
             expect(False, "Unsupported OCN component for data assimilation")
@@ -131,10 +137,10 @@ def buildnml(case, caseroot, compname):
     consistency_checks(case)
 
     # generate DART_input_nml
-    gen_DART_input_nml(case)
+    input_nml = gen_DART_input_nml(case)
 
     # stage sampling error correction
-    stage_sampling_error_correction(case)
+    stage_sampling_error_correction(case, input_nml)
 
 
 ###############################################################################
