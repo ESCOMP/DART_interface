@@ -42,7 +42,8 @@ def gen_DART_input_nml(case):
     # loop over all variables in user_nl_dart. For variables with unspecified namelist groups,
     # determine their groups (if possible) and restore the accordingly
     if 'no_group' in user_nl_dart.data: 
-        for var, val in user_nl_dart.data['no_group'].items():
+        for var, values_dict in user_nl_dart.data['no_group'].items():
+            val = values_dict['values']
             var_group = None
             for group in input_nml.data:
                 if var in input_nml.data[group]:
@@ -71,18 +72,14 @@ def consistency_checks(case):
     calendar = case.get_value("CALENDAR")
     expect(calendar=="GREGORIAN", "When DART is active, the model calendar must be GREGORIAN.")
 
-def stage_sampling_error_correction(case, input_nml):
+def stage_sampling_error_correction(case, comp_data_assim, input_nml):
 
     caseroot = case.get_value("CASEROOT")
     dartroot = case.get_value("COMP_ROOT_DIR_ESP")
     rundir = case.get_value("RUNDIR")
     comp_ocn = case.get_value("COMP_OCN")
 
-    # DATA_ASSIMILATION flag for each component
-    data_assimilation = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
-                            for cc in ['atm', 'cpl', 'ocn', 'wav', 'glc', 'ice', 'rof', 'lnd'] }
-
-    if data_assimilation['ocn'] is True:
+    if comp_data_assim['ocn'] is True:
 
         if comp_ocn == "pop":
             dart_model_dir = os.path.join(dartroot,"DART","models","POP")
@@ -126,7 +123,10 @@ def buildnml(case, caseroot, compname):
     cimeroot = case.get_value("CIMEROOT")
     srcroot  = case.get_value("SRCROOT")
     rundir   = case.get_value("RUNDIR")
-    ninst    = case.get_value("NINST_ESP")
+
+    # DATA_ASSIMILATION flag for each component
+    comp_data_assim = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
+                            for cc in ['atm', 'cpl', 'ocn', 'wav', 'glc', 'ice', 'rof', 'lnd'] }
 
     # Determine configuration directory
     confdir = os.path.join(caseroot,"Buildconf",compname + "conf")
@@ -140,7 +140,7 @@ def buildnml(case, caseroot, compname):
     input_nml = gen_DART_input_nml(case)
 
     # stage sampling error correction
-    stage_sampling_error_correction(case, input_nml)
+    stage_sampling_error_correction(case, comp_data_assim, input_nml)
 
 
 ###############################################################################
