@@ -268,11 +268,13 @@
       }
    },
    "obs_kind_nml": {
-      "$DATA_ASSIMILATION_OCN == True": {
-         "assimilate_these_obs_types": {
+      "assimilate_these_obs_types": {
+         "$DATA_ASSIMILATION_OCN == True": {
             "values": "'SALINITY',         'TEMPERATURE',\n                   'APB_SALINITY',     'APB_TEMPERATURE',\n                  'ADCP_SALINITY',    'ADCP_TEMPERATURE',\n                  'ARGO_SALINITY',    'ARGO_TEMPERATURE',\n                'BOTTLE_SALINITY',  'BOTTLE_TEMPERATURE',\n                   'CTD_SALINITY',     'CTD_TEMPERATURE',\n                   'DBT_SALINITY',     'DBT_TEMPERATURE',\n               'DRIFTER_SALINITY', 'DRIFTER_TEMPERATURE',\n                 'FLOAT_SALINITY',   'FLOAT_TEMPERATURE',\n                'GLIDER_SALINITY',  'GLIDER_TEMPERATURE',\n                   'MBT_SALINITY',     'MBT_TEMPERATURE',\n               'MOORING_SALINITY', 'MOORING_TEMPERATURE',\n                   'STD_SALINITY',     'STD_TEMPERATURE',\n                  'TCTD_SALINITY',    'TCTD_TEMPERATURE',\n                   'XBT_SALINITY',     'XBT_TEMPERATURE',\n                  'XCTD_SALINITY',    'XCTD_TEMPERATURE',\n"
-         },
-         "evaluate_these_obs_types": {
+         }
+      },
+      "evaluate_these_obs_types": {
+         "$DATA_ASSIMILATION_OCN == True": {
             "values": "'SEA_SURFACE_HEIGHT',\n'U_CURRENT_COMPONENT',\n'V_CURRENT_COMPONENT'\n"
          }
       }

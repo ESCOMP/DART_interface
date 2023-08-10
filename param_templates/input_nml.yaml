@@ -207,8 +207,8 @@ obs_sequence_nml:
 #                  'GFO_SEA_SURFACE_ANOMALY'
 
 obs_kind_nml:
-  $DATA_ASSIMILATION_OCN == True:
-    assimilate_these_obs_types:
+  assimilate_these_obs_types:
+    $DATA_ASSIMILATION_OCN == True:
       values: |
         'SALINITY',         'TEMPERATURE',
                            'APB_SALINITY',     'APB_TEMPERATURE',
@@ -226,7 +226,8 @@ obs_kind_nml:
                           'TCTD_SALINITY',    'TCTD_TEMPERATURE',
                            'XBT_SALINITY',     'XBT_TEMPERATURE',
                           'XCTD_SALINITY',    'XCTD_TEMPERATURE',
-    evaluate_these_obs_types:
+  evaluate_these_obs_types:
+    $DATA_ASSIMILATION_OCN == True:
       values: |
         'SEA_SURFACE_HEIGHT',
         'U_CURRENT_COMPONENT',
