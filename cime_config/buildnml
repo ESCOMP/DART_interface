@@ -16,7 +16,7 @@ sys.path.append(os.path.join(_CIMEROOT, "scripts", "Tools"))
 
 from standard_script_setup import *
 from CIME.case import Case
-from CIME.utils import expect, safe_copy
+from CIME.utils import expect, symlink_force
 from CIME.buildnml import create_namelist_infile, parse_input
 
 from CIME.ParamGen.paramgen_nml import ParamGen_NML
@@ -87,21 +87,21 @@ def stage_sampling_error_correction(case, comp_data_assim, input_nml):
             # Stage the files needed for SAMPLING ERROR CORRECTION
             # -------------------------------------------------------------------------
             # TODO: copy below files to Buildconf/dartconf, and not to the caseroot
-            ninst_ocn = int(case.get_value('NINST_OCN'))
-            assim_script = "assimilate.csh" if ninst_ocn>1 else "perfect_model.csh"
-            shutil.copy(os.path.join(dart_model_dir, "shell_scripts", cesmtagmajor, assim_script), caseroot)
-            case.set_value('DATA_ASSIMILATION_SCRIPT', os.path.join(caseroot, assim_script))
+            sampling_error_correction = input_nml.data['assim_tools_nml']['sampling_error_correction']['values']
+            if sampling_error_correction == '.true.':
+                ninst_ocn = int(case.get_value('NINST_OCN'))
+                assim_script = "assimilate.csh" if ninst_ocn>1 else "perfect_model.csh"
+                shutil.copy(os.path.join(dart_model_dir, "shell_scripts", cesmtagmajor, assim_script), caseroot)
+                case.set_value('DATA_ASSIMILATION_SCRIPT', os.path.join(caseroot, assim_script))
 
-            samp_err_file = os.path.join(dartroot, 'DART', 'assimilation_code', 'programs',
-                                         'gen_sampling_err_table', 'work', 'sampling_error_correction_table.nc')
-            if os.path.exists(samp_err_file):
-                expect(3<=ninst_ocn<=200, f"sampling_error_correction_table.nc handles ensemble sizes 3...200. "
-                                          f"Yours is {ninst_ocn}.")
-                shutil.copy(samp_err_file, rundir)
-            else: # sampling_error_correction_table.nc file found
-                sampling_error_correction = input_nml.data['assim_tools_nml']['sampling_error_correction']['values']
-                print(sampling_error_correction)
-                expect(sampling_error_correction != '.true.', \
+                samp_err_file = os.path.join(dartroot, 'DART', 'assimilation_code', 'programs',
+                                             'gen_sampling_err_table', 'work', 'sampling_error_correction_table.nc')
+                if os.path.exists(samp_err_file):
+                    expect(3<=ninst_ocn<=200, f"sampling_error_correction_table.nc handles ensemble sizes 3...200. "
+                                              f"Yours is {ninst_ocn}.")
+                    shutil.copy(samp_err_file, rundir)
+                else: # sampling_error_correction_table.nc file found
+                    expect(sampling_error_correction != '.true.', \
                         "No sampling_error_correction_table.nc file found...\n"
                         "The input.nml:assim_tool_nml:sampling_error_correction is .true. so this file must exist.")
 
@@ -120,9 +120,8 @@ def buildnml(case, caseroot, compname):
     if compname != "dart":
         raise AttributeError
 
-    cimeroot = case.get_value("CIMEROOT")
-    srcroot  = case.get_value("SRCROOT")
-    rundir   = case.get_value("RUNDIR")
+    caseroot = case.get_value("CASEROOT")
+    dartroot = case.get_value("COMP_ROOT_DIR_ESP")
 
     # DATA_ASSIMILATION flag for each component
     comp_data_assim = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
@@ -141,6 +140,11 @@ def buildnml(case, caseroot, compname):
 
     # stage sampling error correction
     stage_sampling_error_correction(case, comp_data_assim, input_nml)
+
+    ### create symbolic link to modify_namelist_templates.py in caseroot
+    ##todo mnt_path = os.path.join(caseroot, "modify_namelist_templates.py")
+    ##todo if not os.path.islink(mnt_path):
+    ##todo     symlink_force(os.path.join(dartroot,"cime_config", "modify_namelist_templates.py"), os.path.join(caseroot, "modify_namelist_templates.py"))
 
 
 ###############################################################################
