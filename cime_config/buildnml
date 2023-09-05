@@ -72,27 +72,31 @@ def consistency_checks(case):
     calendar = case.get_value("CALENDAR")
     expect(calendar=="GREGORIAN", "When DART is active, the model calendar must be GREGORIAN.")
 
-def stage_sampling_error_correction(case, comp_data_assim, input_nml):
+def stage_sampling_error_correction(case, data_assimilation, input_nml):
 
     caseroot = case.get_value("CASEROOT")
     dartroot = case.get_value("COMP_ROOT_DIR_ESP")
     rundir = case.get_value("RUNDIR")
     comp_ocn = case.get_value("COMP_OCN")
 
-    if comp_data_assim['ocn'] is True:
+    n_da_comp = sum(data_assimilation.values())
+
+    if data_assimilation['ocn'] is True:
 
         if comp_ocn == "pop":
             dart_model_dir = os.path.join(dartroot,"DART","models","POP")
+
+            # assimilation script
+            ninst_ocn = int(case.get_value('NINST_OCN'))
+            assim_script = "assimilate.csh" if ninst_ocn>1 else "perfect_model.csh"
+            shutil.copy(os.path.join(dart_model_dir, "shell_scripts", cesmtagmajor, assim_script), caseroot)
+            case.set_value('DATA_ASSIMILATION_SCRIPT', os.path.join(caseroot, assim_script))
 
             # Stage the files needed for SAMPLING ERROR CORRECTION
             # -------------------------------------------------------------------------
             # TODO: copy below files to Buildconf/dartconf, and not to the caseroot
             sampling_error_correction = input_nml.data['assim_tools_nml']['sampling_error_correction']['values']
             if sampling_error_correction == '.true.':
-                ninst_ocn = int(case.get_value('NINST_OCN'))
-                assim_script = "assimilate.csh" if ninst_ocn>1 else "perfect_model.csh"
-                shutil.copy(os.path.join(dart_model_dir, "shell_scripts", cesmtagmajor, assim_script), caseroot)
-                case.set_value('DATA_ASSIMILATION_SCRIPT', os.path.join(caseroot, assim_script))
 
                 samp_err_file = os.path.join(dartroot, 'DART', 'assimilation_code', 'programs',
                                              'gen_sampling_err_table', 'work', 'sampling_error_correction_table.nc')
@@ -108,7 +112,7 @@ def stage_sampling_error_correction(case, comp_data_assim, input_nml):
         else:
             expect(False, "Unsupported OCN component for data assimilation")
     else:
-        expect(False, "Unsupported combination of DATA_ASSIMILATION flags")
+        expect(n_da_comp==0, "Unsupported combination of DATA_ASSIMILATION flags")
 
 
 # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
@@ -124,7 +128,7 @@ def buildnml(case, caseroot, compname):
     dartroot = case.get_value("COMP_ROOT_DIR_ESP")
 
     # DATA_ASSIMILATION flag for each component
-    comp_data_assim = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
+    data_assimilation = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
                             for cc in ['atm', 'cpl', 'ocn', 'wav', 'glc', 'ice', 'rof', 'lnd'] }
 
     # Determine configuration directory
@@ -139,7 +143,7 @@ def buildnml(case, caseroot, compname):
     input_nml = gen_DART_input_nml(case)
 
     # stage sampling error correction
-    stage_sampling_error_correction(case, comp_data_assim, input_nml)
+    stage_sampling_error_correction(case, data_assimilation, input_nml)
 
     ### create symbolic link to modify_namelist_templates.py in caseroot
     ##todo mnt_path = os.path.join(caseroot, "modify_namelist_templates.py")

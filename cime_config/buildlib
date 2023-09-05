@@ -43,7 +43,6 @@ def CESM_DART_config(case):
 
     # number of components for which DA is on
     n_da_comp = sum(data_assimilation.values())
-    expect(n_da_comp>0, "At least one component must be subject to data assimilation when DART is active.")
 
     # select the appropriate mkmf.template:
     compiler = case.get_value("COMPILER")
@@ -89,7 +88,7 @@ def CESM_DART_config(case):
             expect(False, "Unsupported OCN component for data assimilation")
 
     else:
-        expect(False, "Unsupported combination of DATA_ASSIMILATION flags")
+        expect(n_da_comp==0, "Unsupported combination of DATA_ASSIMILATION flags")
 
 
 def buildlib(caseroot, libroot, bldroot):
