@@ -1,0 +1,13 @@
+{
+   "BASEOBSDIR": {
+      "$DATA_ASSIMILATION_OCN == True": "'${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13'"
+   },
+   "MOVE": "'mv -v'",
+   "COPY": "'cp -v --preserve=timestamps'",
+   "LINK": "'ln -vfs'",
+   "REMOVE": "'rm -rf'",
+   "LAUNCHCMD": {
+      "$MACH in ['cheyenne', 'derecho']": "'mpiexec_mpt dplace -s 1'",
+      "else": "mpirun"
+   }
+}

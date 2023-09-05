@@ -17,9 +17,10 @@ sys.path.append(os.path.join(_CIMEROOT, "scripts", "Tools"))
 from standard_script_setup import *
 from CIME.case import Case
 from CIME.utils import expect, symlink_force
-from CIME.buildnml import create_namelist_infile, parse_input
+from CIME.buildnml import parse_input
 
-from CIME.ParamGen.paramgen_nml import ParamGen_NML
+from dart_input_nml import DART_input_nml
+from dart_params import DART_params
 
 logger = logging.getLogger(__name__)
 
@@ -27,17 +28,11 @@ cesmtagmajor = "cesm2_1" # TODO: Generalize this!
 
 def gen_DART_input_nml(case):
 
-    class DART_input_nml(ParamGen_NML):
-        def write(self, output_path, case):
-            self.reduce(lambda varname: case.get_value(varname))
-            self.write_nml(output_path)
-
     dartroot = case.get_value("COMP_ROOT_DIR_ESP")
     caseroot = case.get_value("CASEROOT")
     input_nml_template = os.path.join(dartroot, "param_templates", "json", "input_nml.json")
     input_nml = DART_input_nml.from_json(input_nml_template)
-
-    user_nl_dart = ParamGen_NML.from_nml_file(os.path.join(caseroot,"user_nl_dart"))
+    user_nl_dart = DART_input_nml.from_nml_file(os.path.join(caseroot,"user_nl_dart"))
 
     # loop over all variables in user_nl_dart. For variables with unspecified namelist groups,
     # determine their groups (if possible) and restore the accordingly
@@ -67,6 +62,13 @@ def gen_DART_input_nml(case):
     input_nml.write(os.path.join(caseroot,"input.nml"), case)
 
     return input_nml
+
+def gen_DART_params(case):
+    dartroot = case.get_value("COMP_ROOT_DIR_ESP")
+    caseroot = case.get_value("CASEROOT")
+    dart_params_template = os.path.join(dartroot, "param_templates", "json", "DART_params.json")
+    dart_params = DART_params.from_json(dart_params_template)
+    dart_params.write(os.path.join(caseroot,"DART_params.csh"), case)
 
 def consistency_checks(case):
     calendar = case.get_value("CALENDAR")
@@ -142,13 +144,16 @@ def buildnml(case, caseroot, compname):
     # generate DART_input_nml
     input_nml = gen_DART_input_nml(case)
 
+    # generate DART_params.csh
+    gen_DART_params(case)
+
     # stage sampling error correction
     stage_sampling_error_correction(case, data_assimilation, input_nml)
 
     ### create symbolic link to modify_namelist_templates.py in caseroot
-    ##todo mnt_path = os.path.join(caseroot, "modify_namelist_templates.py")
-    ##todo if not os.path.islink(mnt_path):
-    ##todo     symlink_force(os.path.join(dartroot,"cime_config", "modify_namelist_templates.py"), os.path.join(caseroot, "modify_namelist_templates.py"))
+    mnt_path = os.path.join(caseroot, "modify_namelist_templates.py")
+    if not os.path.islink(mnt_path):
+        symlink_force(os.path.join(dartroot,"cime_config", "modify_namelist_templates.py"), os.path.join(caseroot, "modify_namelist_templates.py"))
 
 
 ###############################################################################
