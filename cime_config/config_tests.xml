@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+This defines various DART-specific system tests
+-->
+
+<config_test>
+
+  <test NAME="DAG">
+    <DESC>DART G-case data assimilation test</DESC>
+    <INFO_DBUG>1</INFO_DBUG>
+    <DOUT_S>TRUE</DOUT_S>
+    <CONTINUE_RUN>FALSE</CONTINUE_RUN>
+    <STOP_N>2</STOP_N>
+    <REST_OPTION>$STOP_OPTION</REST_OPTION>
+    <HIST_OPTION>$STOP_OPTION</HIST_OPTION>
+    <REST_N>$STOP_N</REST_N>
+    <HIST_N>$STOP_N</HIST_N>
+  </test>
+
+</config_test>

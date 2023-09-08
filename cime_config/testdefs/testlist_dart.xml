@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<testlist version="2.0">
+  <test name="DAG" grid="TL319_g17" compset="GIAF_JRA_DA" testmods="dart/da_ocn">
+    <machines>
+      <machine name="cheyenne" compiler="intel" category="aux_dart"/>
+      <machine name="derecho" compiler="intel" category="aux_dart"/>
+    </machines>
+    <options>
+      <option name="wallclock">01:00:00</option>
+    </options>
+  </test>
+</testlist>
