@@ -24,129 +24,177 @@ from dart_params import DART_params
 
 logger = logging.getLogger(__name__)
 
-cesmtagmajor = "cesm2_1" # TODO: Generalize this!
+cesmtagmajor = "cesm2_1"  # TODO: Generalize this!
 
 # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 ####################################################################################
 def buildnml(case, caseroot, compname):
-###############################################################################
+    """Generate and/or stage DART configuration files:
+        (1) Check for configuration consistency.
+        (2) Generate DART input.nml file.
+        (3) Generate DART_params.csh file.
+        (4) Set DATA_ASSIMILATION_SCRIPT variable.
+        (5) Stage sampling error correction
+    """
 
     # Build the component namelist and required stream txt files
     if compname != "dart":
         raise AttributeError
 
+    # Define commonly used variables:
+    ###############################################################################
+
     caseroot = case.get_value("CASEROOT")
     dartroot = case.get_value("COMP_ROOT_DIR_ESP")
     rundir = case.get_value("RUNDIR")
     comp_ocn = case.get_value("COMP_OCN")
-
+    ninst_ocn = int(case.get_value("NINST_OCN"))
 
     # DATA_ASSIMILATION flag for each component
-    data_assimilation = {cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}") \
-                            for cc in ['atm', 'cpl', 'ocn', 'wav', 'glc', 'ice', 'rof', 'lnd'] }
+    data_assimilation = {
+        cc: case.get_value(f"DATA_ASSIMILATION_{cc.upper()}")
+        for cc in ["atm", "cpl", "ocn", "wav", "glc", "ice", "rof", "lnd"]
+    }
+    n_da_comp = sum(data_assimilation.values())
 
     # Determine configuration directory
-    confdir = os.path.join(caseroot,"Buildconf",compname + "conf")
+    confdir = os.path.join(caseroot, "Buildconf", compname + "conf")
     if not os.path.isdir(confdir):
         os.makedirs(confdir)
 
-
+    # Local buildnml function definitions:
+    ###############################################################################
+    
     def consistency_checks():
         calendar = case.get_value("CALENDAR")
-        expect(calendar=="GREGORIAN", "When DART is active, the model calendar must be GREGORIAN.")
-
+        expect(
+            calendar == "GREGORIAN",
+            "When DART is active, the model calendar must be GREGORIAN.",
+        )
 
     def gen_DART_input_nml():
-        input_nml_template = os.path.join(dartroot, "param_templates", "json", "input_nml.json")
+        input_nml_template = os.path.join(
+            dartroot, "param_templates", "json", "input_nml.json"
+        )
         input_nml = DART_input_nml.from_json(input_nml_template)
-        user_nl_dart = DART_input_nml.from_nml_file(os.path.join(caseroot,"user_nl_dart"))
+        user_nl_dart = DART_input_nml.from_nml_file(
+            os.path.join(caseroot, "user_nl_dart")
+        )
 
         # loop over all variables in user_nl_dart. For variables with unspecified namelist groups,
         # determine their groups (if possible) and restore them accordingly
-        if 'no_group' in user_nl_dart.data: 
-            for var, values_dict in user_nl_dart.data['no_group'].items():
-                val = values_dict['values']
+        if "no_group" in user_nl_dart.data:
+            for var, values_dict in user_nl_dart.data["no_group"].items():
+                val = values_dict["values"]
                 var_group = None
                 for group in input_nml.data:
                     if var in input_nml.data[group]:
-                        expect(var_group is None, f"In user_nl_dart, cannot determine which namelist group the variable "
-                                                    f" {var} belongs to. (There are be multiple variables with the same "
-                                                    f"name that belongs to more than one namelist groups.)")
+                        expect(
+                            var_group is None,
+                            f"In user_nl_dart, cannot determine which namelist group the variable "
+                            f" {var} belongs to. (There are be multiple variables with the same "
+                            f"name that belongs to more than one namelist groups.)",
+                        )
                         var_group = group
-                expect(var_group is not None, f"In user_nl_dart, cannot determine which namelist group the variable "
-                                            f" {var} belongs to. (No {var} was found in the default input.nml.")
+                expect(
+                    var_group is not None,
+                    f"In user_nl_dart, cannot determine which namelist group the variable "
+                    f" {var} belongs to. (No {var} was found in the default input.nml.",
+                )
                 if var_group not in user_nl_dart.data:
                     user_nl_dart.data[var_group] = {}
-                user_nl_dart.data[var_group][var] = {'values': val}
+                user_nl_dart.data[var_group][var] = {"values": val}
 
-            # drop 'no_group'. (All variables in 'no_group' are copied to their respective groups above.)
-            user_nl_dart.data.pop('no_group')
+            # drop 'no_group'. (All vars in 'no_group' are copied to their respective groups above.)
+            user_nl_dart.data.pop("no_group")
 
         # apply user_nl changes to final input.nml
-        if len(user_nl_dart.data)>0:
+        if len(user_nl_dart.data) > 0:
             input_nml.append(user_nl_dart)
 
-        input_nml.write(os.path.join(caseroot,"input.nml"), case)
+        input_nml.write(os.path.join(caseroot, "input.nml"), case)
 
         return input_nml
 
-
     def gen_DART_params():
-        dart_params_template = os.path.join(dartroot, "param_templates", "json", "DART_params.json")
+        dart_params_template = os.path.join(
+            dartroot, "param_templates", "json", "DART_params.json"
+        )
         dart_params = DART_params.from_json(dart_params_template)
-        dart_params.write(os.path.join(caseroot,"DART_params.csh"), case)
-  
+        dart_params.write(os.path.join(caseroot, "DART_params.csh"), case)
 
     def set_data_assimilation_script():
-        """(1) Set DATA_ASSIMILATION_SCRIPT variable
-           (2) If requested, stage sampling error correction file."""
+        """Set DATA_ASSIMILATION_SCRIPT variable"""
 
-        if data_assimilation['ocn'] is True:
-        
+        if data_assimilation["ocn"] is True:
+
             if comp_ocn == "pop":
-                dart_model_dir = os.path.join(dartroot,"DART","models","POP")
+                dart_model_dir = os.path.join(dartroot, "DART", "models", "POP")
 
                 # assimilation script
-                ninst_ocn = int(case.get_value('NINST_OCN'))
-                assim_script = "assimilate.csh" if ninst_ocn>1 else "perfect_model.csh"
-                shutil.copy(os.path.join(dart_model_dir, "shell_scripts", cesmtagmajor, assim_script), caseroot)
-                case.set_value('DATA_ASSIMILATION_SCRIPT', os.path.join(caseroot, assim_script))
+                assim_script = (
+                    "assimilate.csh" if ninst_ocn > 1 else "perfect_model.csh"
+                )
+                shutil.copy(
+                    os.path.join(
+                        dart_model_dir, "shell_scripts", cesmtagmajor, assim_script
+                    ),
+                    caseroot,
+                )
+                case.set_value(
+                    "DATA_ASSIMILATION_SCRIPT", os.path.join(caseroot, assim_script)
+                )
 
             else:
                 expect(False, "Unsupported OCN component for data assimilation")
         else:
-            expect(sum(data_assimilation.values())==0, "Unsupported combination of DATA_ASSIMILATION flags")
-
+            expect(n_da_comp == 0, "Unsupported combination of DATA_ASSIMILATION flags")
 
     def stage_sampling_error_correction(input_nml):
         """If requested, stage sampling error correction file."""
 
-        if data_assimilation['ocn'] is True:
-        
+        if data_assimilation["ocn"] is True:
+
             if comp_ocn == "pop":
-            
+
                 # Stage the files needed for SAMPLING ERROR CORRECTION
                 # -------------------------------------------------------------------------
                 # TODO: copy below files to Buildconf/dartconf, and not to the caseroot
-                sampling_error_correction = input_nml.data['assim_tools_nml']['sampling_error_correction']['values']
-                if sampling_error_correction == '.true.':
-                
-                    samp_err_file = os.path.join(dartroot, 'DART', 'assimilation_code', 'programs',
-                                                 'gen_sampling_err_table', 'work', 'sampling_error_correction_table.nc')
+                sampling_error_correction = input_nml.data["assim_tools_nml"][
+                    "sampling_error_correction"
+                ]["values"]
+                if sampling_error_correction == ".true.":
+
+                    samp_err_file = os.path.join(
+                        dartroot,
+                        "DART",
+                        "assimilation_code",
+                        "programs",
+                        "gen_sampling_err_table",
+                        "work",
+                        "sampling_error_correction_table.nc",
+                    )
                     if os.path.exists(samp_err_file):
-                        expect(3<=ninst_ocn<=200, f"sampling_error_correction_table.nc handles ensemble sizes 3...200. "
-                                                  f"Yours is {ninst_ocn}.")
+                        expect(
+                            3 <= ninst_ocn <= 200,
+                            f"sampling_error_correction_table.nc handles ensemble sizes 3...200. "
+                            f"Yours is {ninst_ocn}.",
+                        )
                         shutil.copy(samp_err_file, rundir)
-                    else: # sampling_error_correction_table.nc file found
-                        expect(sampling_error_correction != '.true.', \
+                    else:  # sampling_error_correction_table.nc file found
+                        expect(
+                            sampling_error_correction != ".true.",
                             "No sampling_error_correction_table.nc file found...\n"
-                            "The input.nml:assim_tool_nml:sampling_error_correction is .true. so this file must exist.")
+                            "The input.nml:assim_tool_nml:sampling_error_correction "
+                            "is .true. so this file must exist.",
+                        )
 
             else:
                 expect(False, "Unsupported OCN component for data assimilation")
         else:
-            expect(sum(data_assimilation.values())==0, "Unsupported combination of DATA_ASSIMILATION flags")
+            expect(n_da_comp == 0, "Unsupported combination of DATA_ASSIMILATION flags")
 
+    # Call local buildnml function definitions:
     ###############################################################################
 
     # few consistency checks
@@ -165,9 +213,12 @@ def buildnml(case, caseroot, compname):
     stage_sampling_error_correction(input_nml)
 
     ### create symbolic link to modify_namelist_templates.py in caseroot
-    mnt_path = os.path.join(caseroot, "modify_namelist_templates.py")
-    if not os.path.islink(mnt_path):
-        symlink_force(os.path.join(dartroot,"cime_config", "modify_namelist_templates.py"), os.path.join(caseroot, "modify_namelist_templates.py"))
+    #todo mnt_path = os.path.join(caseroot, "modify_namelist_templates.py")
+    #todo if not os.path.islink(mnt_path):
+    #todo     symlink_force(
+    #todo         os.path.join(dartroot, "cime_config", "modify_namelist_templates.py"),
+    #todo         os.path.join(caseroot, "modify_namelist_templates.py"),
+    #todo     )
 
 
 ###############################################################################
