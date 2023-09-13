@@ -50,6 +50,7 @@ def buildnml(case, caseroot, compname):
     rundir = case.get_value("RUNDIR")
     comp_ocn = case.get_value("COMP_OCN")
     ninst_ocn = int(case.get_value("NINST_OCN"))
+    calendar = case.get_value("CALENDAR")
 
     # DATA_ASSIMILATION flag for each component
     data_assimilation = {
@@ -67,11 +68,18 @@ def buildnml(case, caseroot, compname):
     ###############################################################################
     
     def consistency_checks():
-        calendar = case.get_value("CALENDAR")
         expect(
             calendar == "GREGORIAN",
             "When DART is active, the model calendar must be GREGORIAN.",
         )
+        if data_assimilation["ocn"] is True:
+            run_startdate = case.get_value("RUN_STARTDATE")
+            run_startyear = run_startdate[:4] 
+            expect(
+                2005 <= int(run_startyear) <= 2016, # todo: instead of startdate, check out enddate
+                "When ocean data assimilation is turned on, model date must be between 2005 and 2016 "
+                "to ensure availability of obs files."
+            )
 
     def gen_DART_input_nml():
         input_nml_template = os.path.join(
