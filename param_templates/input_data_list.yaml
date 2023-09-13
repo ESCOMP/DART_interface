@@ -1,0 +1,18 @@
+# The list of input files to be checked out from inputdata
+---
+dart.input_data_list:
+    ocn_obs_seq:
+        $DATA_ASSIMILATION_OCN == True :
+            = [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}01/obs_seq.0Z.{year}01{day:02d}" for day in range(1,32) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}02/obs_seq.0Z.{year}02{day:02d}" for day in range(1,29) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}02/obs_seq.0Z.{year}0229" for year in range(2008,2017,4)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}03/obs_seq.0Z.{year}03{day:02d}" for day in range(1,32) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}04/obs_seq.0Z.{year}04{day:02d}" for day in range(1,31) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}05/obs_seq.0Z.{year}05{day:02d}" for day in range(1,32) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}06/obs_seq.0Z.{year}06{day:02d}" for day in range(1,31) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}07/obs_seq.0Z.{year}07{day:02d}" for day in range(1,32) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}08/obs_seq.0Z.{year}08{day:02d}" for day in range(1,32) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}09/obs_seq.0Z.{year}09{day:02d}" for day in range(1,31) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}10/obs_seq.0Z.{year}10{day:02d}" for day in range(1,32) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}11/obs_seq.0Z.{year}11{day:02d}" for day in range(1,31) for year in range(2005,2017)] + 
+              [f"${DIN_LOC_ROOT}/esp/dart/ocn_obs_seq/WOD13/{year}12/obs_seq.0Z.{year}12{day:02d}" for day in range(1,32) for year in range(2005,2017)]

@@ -21,6 +21,7 @@ from CIME.buildnml import parse_input
 
 from dart_input_nml import DART_input_nml
 from dart_params import DART_params
+from dart_input_data_list import DART_input_data_list
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,13 @@ def buildnml(case, caseroot, compname):
         dart_params = DART_params.from_json(dart_params_template)
         dart_params.write(os.path.join(caseroot, "DART_params.csh"), case)
 
+    def gen_input_data_list():
+        input_data_list_template = os.path.join(
+            dartroot, "param_templates", "json", "input_data_list.json"
+        )
+        dart_params = DART_input_data_list.from_json(input_data_list_template)
+        dart_params.write(os.path.join(confdir, '..', "dart.input_data_list"), case)
+
     def set_data_assimilation_script():
         """Set DATA_ASSIMILATION_SCRIPT variable"""
 
@@ -205,6 +213,9 @@ def buildnml(case, caseroot, compname):
 
     # generate DART_params.csh
     gen_DART_params()
+
+    # generate input_data_list file
+    gen_input_data_list()
 
     # set data_assimilation_script variable
     set_data_assimilation_script()
