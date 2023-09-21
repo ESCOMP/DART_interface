@@ -243,21 +243,21 @@ quality_control_nml:
  
 preprocess_nml:
   input_obs_qty_mod_file: 
-    values: "'../../../assimilation_code/modules/observations/DEFAULT_obs_kind_mod.F90'"
+    values: "'${SRCROOT}/components/dart/DART/assimilation_code/modules/observations/DEFAULT_obs_kind_mod.F90'"
   output_obs_qty_mod_file: 
-    values: "'../../../assimilation_code/modules/observations/obs_kind_mod.f90'"
+    values: "'${SRCROOT}/components/dart/DART/assimilation_code/modules/observations/obs_kind_mod.f90'"
   input_obs_def_mod_file: 
-    values: "'../../../observations/forward_operators/DEFAULT_obs_def_mod.F90'"
+    values: "'${SRCROOT}/components/dart/DART/observations/forward_operators/DEFAULT_obs_def_mod.F90'"
   output_obs_def_mod_file: 
-    values: "'../../../observations/forward_operators/obs_def_mod.f90'"
+    values: "'${SRCROOT}/components/dart/DART/observations/forward_operators/obs_def_mod.f90'"
   obs_type_files: 
     values:
       $DATA_ASSIMILATION_OCN == True:
-        "'../../../observations/forward_operators/obs_def_ocean_mod.f90'"
+        "'${SRCROOT}/components/dart/DART/observations/forward_operators/obs_def_ocean_mod.f90'"
   quantity_files: 
     values: 
       $DATA_ASSIMILATION_OCN == True:
-        "'../../../assimilation_code/modules/observations/ocean_quantities_mod.f90'"
+        "'${SRCROOT}/components/dart/DART/assimilation_code/modules/observations/ocean_quantities_mod.f90'"
 # 
 model_nml:
   assimilation_period_days:
