@@ -43,6 +43,7 @@ class DAG(SystemTestsCommon):
         self._case.set_value("DATA_ASSIMILATION_CYCLES", 1)
         self._case.flush()
         self._case.create_namelists() 
+        self.clean_build()
         self.build_indv()
         self._skip_pnl = False
         ###self.run_indv(suffix="rest")
